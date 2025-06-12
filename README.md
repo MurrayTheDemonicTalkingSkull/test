@@ -46,4 +46,29 @@ lvmdevices --adddev /dev/sdb
 
  
 On both nodes of the cluster, set the use_lvmlockd configuration option in the /etc/lvm/lvm.conf file to use_lvmlockd=1.
+
+
+
+
+
+
+ lvm_activate resource:	
+
+	LV_TCH
+
+	pcs resource update LV_TCH vgname=lvmsharedvg lvname=lv1   --group=VG_GFS2_02
+
+	LV_CDM
+
+	pcs resource update LV_CDM vgname=lvmsharedvg lvname=lv1  --group=VG_GFS2_01
+ 
+Filesystem resources 
+
+	GFS2_TCH
+
+	pcs resource update GFS2_TCH Filesystem device=/dev/lvmsharedvg/lv1 directory=/data  --group=VG_GFS2_02
+
+	GFS2_CDM
+
+	pcs resource update GFS2_CDM Filesystem device=/dev/lvmsharedvg/lv1 directory=/data  --group=VG_GFS2_01
  
