@@ -1,0 +1,38 @@
+- name: Use Thycotic Secret Server credentials per host
+  hosts: dbservers
+  gather_facts: no
+  vars:
+    tss_url: "https://your-thycotic-server/SecretServer"
+    tss_username: "api_user"
+    tss_password: "api_password"
+
+  tasks:
+    - name: Get Thycotic secret for this host
+      set_fact:
+        ssh_username: >-
+          {{ lookup('community.general.tss',
+                    secret='{{ inventory_hostname }}',
+                    field='username',
+                    url=tss_url,
+                    username=tss_username,
+                    password=tss_password) }}
+        ssh_password: >-
+          {{ lookup('community.general.tss',
+                    secret='{{ inventory_hostname }}',
+                    field='password',
+                    url=tss_url,
+                    username=tss_username,
+                    password=tss_password) }}
+
+    - name: Set SSH connection credentials
+      set_fact:
+        ansible_user: "{{ ssh_username }}"
+        ansible_ssh_pass: "{{ ssh_password }}"
+
+    - name: Run uptime
+      ansible.builtin.shell: uptime
+      register: result
+
+    - name: Show uptime
+      debug:
+        var: result.stdout
