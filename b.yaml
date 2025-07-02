@@ -1,0 +1,46 @@
+---
+- name: Run uptime on RHEL servers using Thycotic credentials
+  hosts: rhel_servers
+  gather_facts: no
+
+  vars:
+    thycotic_secret_id: "1234"  # Replace with your actual secret ID
+    thycotic_api_url: "https://your-thycotic-server/SecretServer"
+    thycotic_username: "api_user"
+    thycotic_password: "api_password"
+
+  tasks:
+    - name: Get credentials from Thycotic
+      uri:
+        url: "{{ thycotic_api_url }}/oauth2/token"
+        method: POST
+        body: "grant_type=password&username={{ thycotic_username }}&password={{ thycotic_password }}&client_id=your_client_id"
+        headers:
+          Content-Type: "application/x-www-form-urlencoded"
+        return_content: yes
+      register: auth_response
+
+    - name: Extract access token
+      set_fact:
+        access_token: "{{ auth_response.json.access_token }}"
+
+    - name: Retrieve SSH credentials from Thycotic
+      uri:
+        url: "{{ thycotic_api_url }}/api/v1/secrets/{{ thycotic_secret_id }}"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ access_token }}"
+        return_content: yes
+      register: secret_response
+
+    - name: Set SSH credentials
+      set_fact:
+        ssh_user: "{{ secret_response.json.items | selectattr('fieldName', 'equalto', 'Username') | map(attribute='itemValue') | first }}"
+        ssh_pass: "{{ secret_response.json.items | selectattr('fieldName', 'equalto', 'Password') | map(attribute='itemValue') | first }}"
+
+    - name: Run uptime
+      ansible.builtin.shell: uptime
+      become: yes
+      vars:
+        ansible_user: "{{ ssh_user }}"
+        ansible_ssh_pass: "{{ ssh_pass }}"
